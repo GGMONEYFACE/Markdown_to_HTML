@@ -1,0 +1,19 @@
+<h1>Hello! This script is used to convert Markdown (.md) text into HTML text.</h1>
+<h2>The Idea:</h2>
+<p>This project started as a simple idea on converting similar languages back and forth.</p>
+<h2>Use Cases:</h2>
+<p>Converting into a webpage:</p>
+<ul>
+<li>Github README files </li>
+<li>Discord messages</li>
+<li>personal notes </li>
+</ul>
+<p>This is useful for converting announcements in a Discord server into an announcement on your website or converting personal notes into an official write up.</p>
+<h2>Thought Process:</h2>
+<p>If I take the different symbols that indicate text manipulation within Markdown and convert them to their HTML equivilent, everything should be convertable fairly simply. Problems and edge cases with doubled symbols (i.e. <em>italics</em> and <strong>bold</strong>)</p>
+<h2>Usage</h2>
+<p>Convert a Markdown file to an HTML fragment and print it to the terminal:</p>
+<pre><code>python3 conversion.py README.md</code></pre>
+<p>Write the result to a file instead:</p>
+<pre><code>python3 conversion.py README.md --output README.html</code></pre>
+<p>The starter converter supports headings, paragraphs, unordered and ordered lists, bold and italic text, inline code, links, and fenced code blocks.</p>
