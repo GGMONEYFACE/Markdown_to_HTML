@@ -11,6 +11,7 @@ import argparse
 import html
 import re
 import sys
+import warnings
 from pathlib import Path
 from html.parser import HTMLParser
 
@@ -21,6 +22,25 @@ INLINE_PATTERNS = (
     (re.compile(r"(?<!\*)\*([^*]+)\*(?!\*)|(?<!_)_([^_]+)_(?!_)"), r"<em>\1\2</em>"),
 )
 LINK_PATTERN = re.compile(r"\[([^\]]+)\]\(([^)\s]+)(?:\s+\"([^\"]*)\")?\)")
+VOID_TAGS = {"br", "hr", "img", "input", "meta", "link"}
+SUPPORTED_INLINE_TAGS = {"a", "b", "br", "code", "em", "i", "strong"}
+SUPPORTED_BLOCK_TAGS = {
+    "h1",
+    "h2",
+    "h3",
+    "h4",
+    "h5",
+    "h6",
+    "li",
+    "ol",
+    "p",
+    "pre",
+    "ul",
+}
+
+
+class UnsupportedHtmlTagWarning(UserWarning):
+    """Warning emitted when an HTML tag has no Markdown equivalent."""
 
 
 class _HtmlNode:
@@ -39,7 +59,7 @@ class _MarkdownHtmlParser(HTMLParser):
     def handle_starttag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
         node = _HtmlNode(tag.lower(), {key: value or "" for key, value in attrs})
         self.stack[-1].children.append(node)
-        if tag.lower() not in {"br", "hr", "img", "input", "meta", "link"}:
+        if tag.lower() not in VOID_TAGS:
             self.stack.append(node)
 
     def handle_startendtag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
@@ -165,7 +185,38 @@ def _render_inline_html(node: _HtmlNode | str) -> str:
         return f"[{content}]({href}{title_part})"
     if node.tag == "br":
         return "\n"
+    if node.tag not in SUPPORTED_INLINE_TAGS:
+        warnings.warn(
+            f"<{node.tag}> cannot be converted to Markdown; preserving it as raw HTML",
+            UnsupportedHtmlTagWarning,
+            stacklevel=2,
+        )
+        return _render_raw_html(node)
     return content
+
+
+def _render_raw_html(node: _HtmlNode) -> str:
+    attributes = "".join(
+        f' {name}="{html.escape(value, quote=True)}"' for name, value in node.attrs.items()
+    )
+    content = "".join(
+        child if isinstance(child, str) else _render_raw_html(child) for child in node.children
+    )
+    if node.tag in VOID_TAGS:
+        return f"<{node.tag}{attributes}>"
+    return f"<{node.tag}{attributes}>{content}</{node.tag}>"
+
+
+def _warn_for_unsupported_tags(node: _HtmlNode) -> None:
+    if node.tag not in SUPPORTED_INLINE_TAGS | SUPPORTED_BLOCK_TAGS:
+        warnings.warn(
+            f"<{node.tag}> cannot be converted to Markdown; preserving it as raw HTML",
+            UnsupportedHtmlTagWarning,
+            stacklevel=3,
+        )
+    for child in node.children:
+        if isinstance(child, _HtmlNode):
+            _warn_for_unsupported_tags(child)
 
 
 def _render_html_block(node: _HtmlNode | str) -> str:
@@ -195,8 +246,9 @@ def _render_html_block(node: _HtmlNode | str) -> str:
             else _render_inline_html(node)
         )
         return f"```\n{content}\n```"
-    if node.tag in {"script", "style"}:
-        return ""
+    if node.tag not in SUPPORTED_BLOCK_TAGS:
+        _warn_for_unsupported_tags(node)
+        return _render_raw_html(node)
     return _render_inline_html(node)
 
 

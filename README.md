@@ -43,9 +43,11 @@ The `--from-html` option also works with standard input and `--output`:
 cat README.html | python3 conversion.py - --from-html --output README-restored.md
 ```
 
-The starter converter supports headings, paragraphs, unordered and ordered
-lists, bold and italic text, inline code, links, and fenced code blocks.
-These supported elements round-trip between Markdown and HTML. HTML outside
-that subset is preserved as plain text where possible, but arbitrary HTML and
-Markdown extensions are not guaranteed to round-trip exactly.
+The starter converter supports headings, paragraphs, unordered and ordered lists, bold and italic text, inline code, links, and fenced code blocks.
+These supported elements round-trip between Markdown and HTML. HTML outside that subset is preserved as plain text where possible, but arbitrary HTML and Markdown extensions are not guaranteed to round-trip exactly.
+
+When converting HTML, tags without a Markdown equivalent are preserved as raw
+HTML and an `UnsupportedHtmlTagWarning` is written to standard error. This
+allows larger HTML documents to convert without silently losing unsupported
+content.
  
